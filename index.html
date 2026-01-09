@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Live Chat Viewer</title>
+    <style>
+        :root {
+            font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            font-weight: 400;
+            color-scheme: light dark;
+            color: rgba(255, 255, 255, 0.87);
+            background-color: #242424;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        body { margin: 0; overflow: hidden; /* Prevent body from scrolling */ }
+        #app {
+            width: 100%;
+            max-width: 800px;
+            height: 100vh; /* Make app container fill the viewport height */
+            margin: 0 auto;
+            padding: 2rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box; /* Include padding in height calculation */
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            flex-grow: 1; /* Allow container to fill space in #app */
+            min-height: 0; /* Crucial for nested flex scrolling */
+        }
+        .url-form { display: flex; gap: 0.5rem; width: 100%; }
+        .url-input { flex-grow: 1; padding: 0.8rem 1rem; border: 1px solid #555; border-radius: 8px; font-size: 1em; background-color: #1e1e1e; color: #fff; }
+        .submit-button { padding: 0.8rem 1.5rem; border-radius: 8px; border: 1px solid transparent; font-size: 1em; font-weight: 500; background-color: #1a1a1a; cursor: pointer; transition: border-color 0.25s; }
+        .submit-button:hover { border-color: #646cff; }
+        .submit-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .chat-container {
+            flex-grow: 1; /* Make chat container fill remaining space */
+            min-height: 0; /* Crucial for nested flex scrolling */
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #444;
+            border-radius: 8px;
+            overflow-y: auto; /* This enables internal scrolling */
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            background-color: #1e1e1e;
+        }
+        .chat-message { display: flex; gap: 0.75rem; align-items: flex-start; }
+        .author-photo { width: 24px; height: 24px; border-radius: 50%; }
+        .message-content { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; }
+        .author-name { font-weight: 600; color: #aaa; font-size: 0.9em; }
+        .message-text { word-break: break-all; }
+        .error-message { color: #ff6b6b; background-color: #3d1c1c; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            #app {
+                padding: 0; /* Remove padding on mobile */
+                max-width: none;
+            }
+            .container {
+                gap: 0;
+                border-radius: 0;
+            }
+            .container > h1, .container > p {
+                /* Hide title on mobile for more space */
+                display: none;
+            }
+            .url-form {
+                padding: 0.75rem;
+                background-color: #333;
+                border-radius: 0;
+            }
+            .chat-container {
+                margin-top: 0;
+                border: none;
+                border-radius: 0;
+                padding: 0.75rem;
+            }
+            .error-message {
+                margin: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <h1>YouTube Live Chat Viewer</h1>
+            <p>Enter the URL of a YouTube Live stream to view the chat.</p>
+            <form id="url-form" class="url-form">
+                <input type="text" id="url-input" placeholder="e.g., https://www.youtube.com/watch?v=..." class="url-input"/>
+                <button type="submit" id="submit-button" class="submit-button">Get Chat</button>
+            </form>
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="chat-container" class="chat-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3001';
+
+        const form = document.getElementById('url-form');
+        const urlInput = document.getElementById('url-input');
+        const submitButton = document.getElementById('submit-button');
+        const chatContainer = document.getElementById('chat-container');
+        const errorMessage = document.getElementById('error-message');
+
+        let intervalId = null;
+        let apiKey = null;
+        let continuation = null;
+
+        const youtube_parser = (url) => {
+            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[7].length === 11) ? match[7] : false;
+        };
+
+        const showError = (message) => {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        };
+
+        const clearError = () => {
+            errorMessage.textContent = '';
+            errorMessage.style.display = 'none';
+        };
+        
+        const setLoading = (isLoading) => {
+            submitButton.disabled = isLoading;
+            submitButton.textContent = isLoading ? 'Loading...' : 'Get Chat';
+        };
+
+        const addMessage = (msg) => {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message';
+            msgDiv.innerHTML = `
+                <img src="${msg.photoUrl}" alt="${msg.author}" class="author-photo">
+                <div class="message-content">
+                    <span class="author-name">${msg.author}</span>
+                    <span class="message-text">${msg.message}</span>
+                </div>
+            `;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll
+        };
+        
+        const fetchChat = async () => {
+            if (!continuation || !apiKey) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ continuation, apiKey }),
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const chatData = await response.json();
+
+                if (chatData.continuationContents) {
+                    const actions = chatData.continuationContents.liveChatContinuation.actions || [];
+                    actions
+                        .map(action => action.addChatItemAction?.item.liveChatTextMessageRenderer)
+                        .filter(Boolean)
+                        .forEach(renderer => {
+                            addMessage({
+                                id: renderer.id,
+                                author: renderer.authorName.simpleText,
+                                message: renderer.message.runs.map(run => run.text).join(''),
+                                photoUrl: renderer.authorPhoto.thumbnails[0].url,
+                            });
+                        });
+                    
+                    continuation = chatData.continuationContents.liveChatContinuation.continuations[0].invalidationContinuationData?.continuation || chatData.continuationContents.liveChatContinuation.continuations[0].timedContinuationData?.continuation;
+                } else {
+                    // If no contents, might be end of stream or an issue
+                    console.log("Chat ended or no new messages.");
+                    clearInterval(intervalId);
+                }
+
+            } catch (err) {
+                console.error('Error fetching chat:', err);
+                showError('Could not fetch new chat messages.');
+                clearInterval(intervalId);
+            }
+        };
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (intervalId) clearInterval(intervalId);
+
+            clearError();
+            chatContainer.innerHTML = '';
+            setLoading(true);
+
+            const videoId = youtube_parser(urlInput.value);
+            if (!videoId) {
+                showError('Invalid YouTube URL');
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/start-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoId }),
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const startData = await response.json();
+
+                if(startData.error) {
+                    throw new Error(startData.error);
+                }
+
+                apiKey = startData.apiKey;
+                continuation = startData.continuation;
+
+                await fetchChat();
+                intervalId = setInterval(fetchChat, 5000); // Poll every 5 seconds
+
+            } catch (err) {
+                console.error('Error starting chat:', err);
+                showError('Failed to start chat. Make sure the video is a live stream.');
+            } finally {
+                setLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>
