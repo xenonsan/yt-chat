@@ -1,49 +1,50 @@
-# YouTubeチャットビューア (Cloudflare Workers版)
+# YouTubeチャットビューア (Cloudflare Pages版)
 
-アプリケーションの構造を、Node.jsで実行する形態から**Cloudflare Workers**上で実行する形態に全面的に刷新しました。
-これにより、ご自身のPCでサーバーを起動する必要がなくなり、Cloudflareのグローバルネットワーク上でアプリケーションを公開・実行できます。
+アプリケーションの構造を**Cloudflare Pages + Functions**を利用する、よりモダンで管理しやすい構成に更新しました。
 
-## 新しいアーキテクチャ
+## 新しいファイル構成
 
-- **`src/index.js`**: フロントエンドのHTMLと、APIのロジックがすべて含まれたCloudflare Workerスクリプトです。
-- **`wrangler.toml`**: Cloudflareにデプロイするための設定ファイルです。
+- **`/index.html`**: UI（ユーザーインターフェース）のすべてを担う単一のファイルです。**Cloudflare Pages**によって静的サイトとして配信されます。
+- **`/functions/api/[[path]].js`**: YouTubeからのチャット取得など、すべてのバックエンドAPIロジックを担うファイルです。**Cloudflare Functions**として自動的にデプロイされます。
+
+### 旧ファイルについて
+以前のバージョンで使われていた `server.js`, `wrangler.toml`, `src` フォルダは現在使用されていません。これらは無視していただいて問題ありませんし、手動で削除しても構いません。
+
+---
 
 ## デプロイ方法
 
-このアプリケーションをCloudflareにデプロイするには、`wrangler`というコマンドラインツールを使用します。
+このアプリケーションは、Cloudflare Pagesにデプロイすることで公開されます。方法は2つあります。
 
-### ステップ1: Wranglerのインストール
+### 方法1: GitHub連携（推奨）
 
-まだWranglerをインストールしていない場合は、ターミナルで以下のコマンドを実行してインストールします。Node.jsがPCにインストールされている必要があります。
+最も簡単で推奨される方法です。
 
-```bash
-npm install -g wrangler
-```
+1.  このプロジェクトのファイル（`index.html`と`functions`フォルダなど）を、ご自身のGitHubリポジトリにアップロード（プッシュ）します。
+2.  Cloudflareのダッシュボードにログインします。
+3.  `Workers & Pages` > `Pages` > `Create a new project` を選択し、先ほど作成したGitHubリポジトリに接続します。
+4.  ビルド設定は不要です。「静的サイト」のプリセットのままで問題ありません。
+5.  「Save and Deploy」をクリックすると、自動的にビルドとデプロイが開始されます。以降、GitHubリポジトリに新しい変更をプッシュするたびに、自動でサイトが更新されます。
 
-### ステップ2: Cloudflareへのログイン
+### 方法2: Wrangler CLIによる手動デプロイ
 
-以下のコマンドを実行すると、ブラウザが開きCloudflareアカウントへのログインを求められます。一度ログインすれば、このPCでは再ログインは不要です。
+コマンドラインから直接デプロイする方法です。
 
-```bash
-wrangler login
-```
+1.  **Wranglerのインストール** (未インストールの場合)
+    ```bash
+    npm install -g wrangler
+    ```
 
-### ステップ3: アプリケーションのデプロイ
+2.  **Cloudflareへのログイン** (未ログインの場合)
+    ```bash
+    wrangler login
+    ```
 
-最後に、このプロジェクトのルートディレクトリ（この`README.md`ファイルがある場所）で、以下のコマンドを実行します。
+3.  **デプロイの実行**
+    このプロジェクトのルートディレクトリ（`index.html`がある場所）で、以下のコマンドを実行します。
+    ```bash
+    wrangler pages deploy .
+    ```
+    `--project-name`フラグでCloudflare上のプロジェクト名を指定できます（例: `wrangler pages deploy . --project-name=yt-chat`）。
 
-```bash
-wrangler deploy
-```
-
-コマンドが成功すると、`... .workers.dev` という形式のURLが表示されます。そのURLにブラウザでアクセスすると、公開されたアプリケーションを使用できます。
-
-## 開発（ローカルテスト）
-
-ローカル環境でデプロイ前に動作確認をしたい場合は、以下のコマンドを実行します。
-
-```bash
-wrangler dev
-```
-
-これにより、`http://localhost:8787` でローカルサーバーが起動します。
+デプロイが完了すると表示される `.pages.dev` のURLにアクセスすれば、公開されたアプリケーションが使用できます。
