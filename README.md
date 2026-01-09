@@ -1,50 +1,72 @@
-# YouTubeチャットビューア (Cloudflare Pages版)
+# ユニバーサルYTチャットビューア
 
-アプリケーションの構造を**Cloudflare Pages + Functions**を利用する、よりモダンで管理しやすい構成に更新しました。
+複数のプラットフォーム（ローカルPC、Vercel、Render.com）で動作するように設計された、ポータブルなYouTubeライブチャットビューアです。
 
-## 新しいファイル構成
+UIはYouTubeのダークテーマを模しており、日本語化されています。
 
-- **`/index.html`**: UI（ユーザーインターフェース）のすべてを担う単一のファイルです。**Cloudflare Pages**によって静的サイトとして配信されます。
-- **`/functions/api/[[path]].js`**: YouTubeからのチャット取得など、すべてのバックエンドAPIロジックを担うファイルです。**Cloudflare Functions**として自動的にデプロイされます。
+## アーキテクチャ
 
-### 旧ファイルについて
-以前のバージョンで使われていた `server.js`, `wrangler.toml`, `src` フォルダは現在使用されていません。これらは無視していただいて問題ありませんし、手動で削除しても構いません。
+このアプリケーションは、多くのNode.jsホスティング環境で動作する標準的な構成を採用しています。
+
+-   `/public`: フロントエンドの `index.html` ファイルが配置されています。
+-   `/api/index.js`: `Express`で構築されたAPIサーバーのコアロジックです。Vercelではサーバーレス関数として、Render/ローカルではNode.jsサーバーの一部として動作します。
+-   `/server.js`: Renderおよびローカル環境でサーバーを起動するためのエントリーポイントです。
+-   `/package.json`: 依存関係 (`express`, `axios`) を定義します。
+-   `/vercel.json`: Vercelのためのルーティング設定ファイルです。
 
 ---
 
-## デプロイ方法
+## 依存関係のインストール
 
-このアプリケーションは、Cloudflare Pagesにデプロイすることで公開されます。方法は2つあります。
+どの環境で実行する場合でも、最初に一度だけ依存関係をインストールする必要があります。
 
-### 方法1: GitHub連携（推奨）
+ターミナルでプロジェクトのルートディレクトリに移動し、以下のコマンドを実行してください。
 
-最も簡単で推奨される方法です。
+```bash
+npm install
+```
 
-1.  このプロジェクトのファイル（`index.html`と`functions`フォルダなど）を、ご自身のGitHubリポジトリにアップロード（プッシュ）します。
-2.  Cloudflareのダッシュボードにログインします。
-3.  `Workers & Pages` > `Pages` > `Create a new project` を選択し、先ほど作成したGitHubリポジトリに接続します。
-4.  ビルド設定は不要です。「静的サイト」のプリセットのままで問題ありません。
-5.  「Save and Deploy」をクリックすると、自動的にビルドとデプロイが開始されます。以降、GitHubリポジトリに新しい変更をプッシュするたびに、自動でサイトが更新されます。
+---
 
-### 方法2: Wrangler CLIによる手動デプロイ
+## 各環境での実行・デプロイ方法
 
-コマンドラインから直接デプロイする方法です。
+### 1. ローカル環境での実行
 
-1.  **Wranglerのインストール** (未インストールの場合)
+開発やローカルでのテストを行う場合の手順です。
+
+1.  `npm install` を実行（初回のみ）。
+2.  以下のコマンドでサーバーを起動します。
+
     ```bash
-    npm install -g wrangler
+    npm start
     ```
+3.  ブラウザで `http://localhost:3000` にアクセスします。
 
-2.  **Cloudflareへのログイン** (未ログインの場合)
-    ```bash
-    wrangler login
-    ```
+### 2. Vercelへのデプロイ
 
-3.  **デプロイの実行**
-    このプロジェクトのルートディレクトリ（`index.html`がある場所）で、以下のコマンドを実行します。
-    ```bash
-    wrangler pages deploy .
-    ```
-    `--project-name`フラグでCloudflare上のプロジェクト名を指定できます（例: `wrangler pages deploy . --project-name=yt-chat`）。
+VercelはGitリポジトリと連携して、非常に簡単にデプロイできます。
 
-デプロイが完了すると表示される `.pages.dev` のURLにアクセスすれば、公開されたアプリケーションが使用できます。
+1.  このプロジェクトのファイルをすべてGitHubリポジトリにアップロードします。
+2.  Vercelにログインし、"Add New... > Project" を選択します。
+3.  作成したGitHubリポジトリをインポートします。
+4.  フレームワークのプリセットとして`Vercel`が自動的に設定を認識します。そのまま`Deploy`ボタンをクリックします。
+5.  デプロイが完了すると、`.vercel.app`のURLが発行されます。
+
+### 3. Render.comへのデプロイ
+
+RenderもGitリポジトリと連携してデプロイします。
+
+1.  このプロジェクトのファイルをすべてGitHubリポジトリにアップロードします。
+2.  Renderのダッシュボードで "New + > Web Service" を選択します。
+3.  作成したGitHubリポジトリに接続します。
+4.  以下の設定を確認・入力します。
+    -   **Runtime:** `Node`
+    -   **Build Command:** `npm install`
+    -   **Start Command:** `npm start`
+5.  「Create Web Service」をクリックすると、ビルドとデプロイが開始されます。
+
+### Cloudflare Pagesについて
+
+このコードベースはNode.jsランタイムを前提としています。Cloudflare Pagesの標準環境はNode.jsではないため、このままでは動作しません。
+
+Cloudflareで実行したい場合は、以前にご提案した**Cloudflare Pages + Functions**の構成（`functions`ディレクトリにAPIを配置する方式）で別途構築する必要があります。
