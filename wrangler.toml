@@ -1,0 +1,10 @@
+# Cloudflare Worker configuration file
+name = "yt-chat-viewer"
+main = "src/index.js"
+compatibility_date = "2023-11-21"
+
+# This allows you to test your worker locally
+# using 'wrangler dev'
+[dev]
+port = 8787
+local_protocol = "http"
