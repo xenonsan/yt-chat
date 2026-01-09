@@ -144,18 +144,18 @@ const HTML_CONTENT = `<!DOCTYPE html>
         };
 
         const addMessage = (msg) => {
+            const isScrolledToBottom = chatContainer.scrollTop + chatContainer.clientHeight >= chatContainer.scrollHeight - 20;
             const msgDiv = document.createElement('div');
             msgDiv.className = 'chat-message';
-            msgDiv.innerHTML = `
-                <img src="${msg.photoUrl}" alt="${msg.author}" class="author-photo">
+            msgDiv.innerHTML = \`
+                <img src="\${msg.photoUrl}" alt="\${msg.author}" class="author-photo">
                 <div class="message-body">
-                    <span class="timestamp">${msg.timestamp}</span>
-                    <span class="author-name">${msg.author}</span>
-                    <span class="message-text">${msg.message}</span>
+                    <span class="timestamp">\${msg.timestamp}</span>
+                    <span class="author-name">\${msg.author}</span>
+                    <span class="message-text">\${msg.message}</span>
                 </div>
-            `;
+            \`;
             chatContainer.appendChild(msgDiv);
-            const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 5;
             if (isScrolledToBottom) {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
@@ -165,13 +165,13 @@ const HTML_CONTENT = `<!DOCTYPE html>
             if (!continuation || !apiKey) return;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/chat`, {
+                const response = await fetch(\`\${API_BASE_URL}/chat\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ continuation, apiKey }),
                 });
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) throw new Error(\`HTTP error! status: \${response.status}\`);
                 
                 const chatData = await response.json();
 
@@ -219,13 +219,13 @@ const HTML_CONTENT = `<!DOCTYPE html>
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/start-chat`, {
+                const response = await fetch(\`\${API_BASE_URL}/start-chat\`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ videoId }),
                 });
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) throw new Error(\`HTTP error! status: \${response.status}\`);
 
                 const startData = await response.json();
 
@@ -249,7 +249,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
     </script>
 </body>
 </html>
-`;
+\`;
 
 // Universal handler logic
 async function handleRequest(request) {
@@ -278,7 +278,7 @@ async function handleRequest(request) {
     if (path === '/api/start-chat' && request.method === 'POST') {
         try {
             const { videoId } = await request.json();
-            const ytResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+            const ytResponse = await fetch(\`https://www.youtube.com/watch?v=\${videoId}\`, {
                 headers: { 'Accept-Language': 'en-US,en;q=0.5' }
             });
             const html = await ytResponse.text();
@@ -314,7 +314,7 @@ async function handleRequest(request) {
     if (path === '/api/chat' && request.method === 'POST') {
         try {
             const { continuation, apiKey } = await request.json();
-            const ytResponse = await fetch(`https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=${apiKey}`, {
+            const ytResponse = await fetch(\`https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=\${apiKey}\`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

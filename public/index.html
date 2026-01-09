@@ -144,6 +144,7 @@
         };
 
         const addMessage = (msg) => {
+            const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 10;
             const msgDiv = document.createElement('div');
             msgDiv.className = 'chat-message';
             msgDiv.innerHTML = `
@@ -155,7 +156,6 @@
                 </div>
             `;
             chatContainer.appendChild(msgDiv);
-            const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 5;
             if (isScrolledToBottom) {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }

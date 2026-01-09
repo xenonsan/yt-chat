@@ -142,6 +142,7 @@
         };
 
         const addMessage = (msg) => {
+            const isScrolledToBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 10;
             const msgDiv = document.createElement('div');
             msgDiv.className = 'chat-message';
             msgDiv.innerHTML = `
@@ -152,7 +153,9 @@
                 </div>
             `;
             chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight; // Auto-scroll
+            if (isScrolledToBottom) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
         };
         
         const fetchChat = async () => {
