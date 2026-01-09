@@ -1,22 +1,20 @@
 {
-  "name": "universal-yt-chat",
-  "version": "1.0.0",
-  "description": "A portable YouTube live chat viewer for multiple platforms.",
+  "name": "universal-yt-chat-viewer",
+  "version": "2.0.0",
+  "description": "A truly universal YouTube chat viewer that runs locally, and on Cloudflare, Vercel, and Render.",
   "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "keywords": [
     "youtube",
     "chat",
-    "viewer"
+    "viewer",
+    "universal",
+    "serverless",
+    "worker"
   ],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "axios": "^1.6.8",
-    "express": "^4.19.2"
-  }
+  "license": "ISC"
 }
-
