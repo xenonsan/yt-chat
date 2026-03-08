@@ -1,5 +1,5 @@
 # Cloudflare Worker configuration file
-name = "yt-chat-viewer"
+name = "yt-chat"
 main = "src/index.js"
 compatibility_date = "2023-11-21"
 
